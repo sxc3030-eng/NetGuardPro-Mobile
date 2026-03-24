@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">NetGuardPro Mobile</string>
+    <string name="nav_dashboard">Dashboard</string>
+    <string name="nav_vpn">VPN</string>
+    <string name="nav_firewall">Firewall</string>
+    <string name="nav_cleaner">Cleaner</string>
+
+    <!-- Dashboard -->
+    <string name="security_score">Security Score</string>
+    <string name="vpn_status">VPN Status</string>
+    <string name="firewall_status">Firewall Status</string>
+    <string name="dns_stats">DNS Filtering</string>
+    <string name="cleaner_status">Device Cleaner</string>
+    <string name="quick_actions">Quick Actions</string>
+
+    <!-- VPN -->
+    <string name="vpn_connect">Connect</string>
+    <string name="vpn_disconnect">Disconnect</string>
+    <string name="vpn_connecting">Connecting…</string>
+    <string name="vpn_server">Server Location</string>
+    <string name="vpn_upload">Upload</string>
+    <string name="vpn_download">Download</string>
+    <string name="vpn_duration">Duration</string>
+    <string name="vpn_history">Connection History</string>
+    <string name="vpn_notification_title">NetGuardPro VPN Active</string>
+    <string name="vpn_notification_text">Your connection is secured</string>
+    <string name="vpn_channel_name">VPN Service</string>
+    <string name="vpn_channel_description">Shows VPN connection status</string>
+
+    <!-- Firewall -->
+    <string name="firewall_enabled">Firewall Enabled</string>
+    <string name="firewall_disabled">Firewall Disabled</string>
+    <string name="firewall_search">Search apps…</string>
+    <string name="firewall_wifi">WiFi</string>
+    <string name="firewall_mobile">Mobile</string>
+    <string name="firewall_blocked_today">Blocked Today</string>
+    <string name="firewall_rules">App Rules</string>
+    <string name="firewall_notification_title">NetGuardPro Firewall Active</string>
+    <string name="firewall_notification_text">Monitoring network traffic</string>
+    <string name="firewall_channel_name">Firewall Service</string>
+    <string name="firewall_channel_description">Shows firewall monitoring status</string>
+
+    <!-- DNS -->
+    <string name="dns_queries_today">Queries Today</string>
+    <string name="dns_blocked_today">Blocked Today</string>
+    <string name="dns_blocklists">Active Blocklists</string>
+
+    <!-- Cleaner -->
+    <string name="cleaner_scan">Scan Device</string>
+    <string name="cleaner_scanning">Scanning…</string>
+    <string name="cleaner_clean_all">Clean All</string>
+    <string name="cleaner_cache">App Cache</string>
+    <string name="cleaner_apks">APK Files</string>
+    <string name="cleaner_large_files">Large Files</string>
+    <string name="cleaner_temp_files">Temp Files</string>
+    <string name="cleaner_storage_used">Storage Used</string>
+    <string name="cleaner_storage_free">Storage Free</string>
+    <string name="cleaner_items_found">items found</string>
+    <string name="cleaner_cleaned">Cleaned successfully</string>
+
+    <!-- General -->
+    <string name="enabled">Enabled</string>
+    <string name="disabled">Disabled</string>
+    <string name="connected">Connected</string>
+    <string name="disconnected">Disconnected</string>
+    <string name="unknown">Unknown</string>
+    <string name="cancel">Cancel</string>
+    <string name="ok">OK</string>
+</resources>
