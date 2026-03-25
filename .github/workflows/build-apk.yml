@@ -1,0 +1,60 @@
+name: Build APK
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: NetGuardPro-Mobile-debug
+          path: app/build/outputs/apk/debug/*.apk
+
+      - name: Create Release (on tag)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: app/build/outputs/apk/debug/*.apk
+          body: |
+            ## 📱 NetGuardPro Mobile ${{ github.ref_name }}
+
+            ### Features
+            - 🔒 VPN (WireGuard tunnel)
+            - 🛡️ Firewall (per-app traffic control)
+            - 🚫 DNS Filter (ads, trackers, malware, phishing)
+            - 🧹 Cleaner (cache, APKs, large files)
+
+            ### Install
+            1. Download the APK below
+            2. Enable "Install from unknown sources" on your Android device
+            3. Install the APK
+
+            > ⚠️ This is a debug build. For Play Store release, a signed APK is needed.
