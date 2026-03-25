@@ -4,11 +4,10 @@ import android.app.Notification
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.net.ConnectivityManager
-import android.net.VpnService
+import android.net.NetworkCapabilities
 import android.os.IBinder
-import android.os.ParcelFileDescriptor
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.netguardpro.mobile.MainActivity
 import com.netguardpro.mobile.NetGuardApp
@@ -23,8 +22,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import java.io.FileInputStream
-import java.nio.ByteBuffer
 
 class FirewallService : Service() {
 
@@ -65,14 +62,24 @@ class FirewallService : Service() {
     }
 
     private fun startMonitoring() {
-        startForeground(NOTIFICATION_ID, createNotification())
+        try {
+            startForeground(NOTIFICATION_ID, createNotification())
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to start foreground: ${e.message}", e)
+            stopSelf()
+            return
+        }
         _isActive.value = true
         loadRules()
 
         monitorJob?.cancel()
         monitorJob = scope.launch {
             while (true) {
-                checkConnections()
+                try {
+                    checkConnections()
+                } catch (e: Exception) {
+                    Log.e(TAG, "checkConnections error: ${e.message}", e)
+                }
                 delay(5000)
             }
         }
@@ -82,25 +89,33 @@ class FirewallService : Service() {
         monitorJob?.cancel()
         monitorJob = null
         _isActive.value = false
-        stopForeground(STOP_FOREGROUND_REMOVE)
+        try {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+        } catch (e: Exception) {
+            Log.e(TAG, "stopForeground error: ${e.message}", e)
+        }
         stopSelf()
     }
 
     private fun loadRules() {
         scope.launch {
-            val db = NetGuardApp.instance.database
-            val rulesList = db.firewallRuleDao().getAllRules()
-            rules = rulesList.associateBy { it.packageName }
+            try {
+                val db = NetGuardApp.instance.database
+                val rulesList = db.firewallRuleDao().getAllRules()
+                rules = rulesList.associateBy { it.packageName }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to load rules: ${e.message}", e)
+            }
         }
     }
 
     private fun checkConnections() {
-        val connectivityManager = getSystemService(ConnectivityManager::class.java)
+        val connectivityManager = getSystemService(ConnectivityManager::class.java) ?: return
         val activeNetwork = connectivityManager.activeNetwork ?: return
         val capabilities = connectivityManager.getNetworkCapabilities(activeNetwork) ?: return
 
-        val isWifi = capabilities.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI)
-        val isCellular = capabilities.hasTransport(android.net.NetworkCapabilities.TRANSPORT_CELLULAR)
+        val isWifi = capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+        val isCellular = capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)
 
         rules.forEach { (packageName, rule) ->
             val shouldBlock = when {
@@ -111,8 +126,12 @@ class FirewallService : Service() {
             if (shouldBlock) {
                 _blockedCount.value++
                 scope.launch {
-                    val db = NetGuardApp.instance.database
-                    db.firewallRuleDao().incrementBlockedCount(packageName)
+                    try {
+                        val db = NetGuardApp.instance.database
+                        db.firewallRuleDao().incrementBlockedCount(packageName)
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to increment blocked count: ${e.message}", e)
+                    }
                 }
             }
         }
@@ -137,13 +156,18 @@ class FirewallService : Service() {
     }
 
     override fun onDestroy() {
-        stopMonitoring()
+        try {
+            stopMonitoring()
+        } catch (e: Exception) {
+            Log.e(TAG, "onDestroy error: ${e.message}", e)
+        }
         scope.cancel()
         instance = null
         super.onDestroy()
     }
 
     companion object {
+        private const val TAG = "FirewallService"
         const val ACTION_START = "com.netguardpro.mobile.firewall.START"
         const val ACTION_STOP = "com.netguardpro.mobile.firewall.STOP"
         const val ACTION_UPDATE_RULES = "com.netguardpro.mobile.firewall.UPDATE_RULES"

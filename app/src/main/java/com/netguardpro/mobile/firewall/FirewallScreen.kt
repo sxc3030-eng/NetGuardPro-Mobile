@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.SignalCellular4Bar
+import com.netguardpro.mobile.ui.theme.BrandError
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -121,6 +122,41 @@ fun FirewallScreen(viewModel: FirewallViewModel = viewModel()) {
                 contentAlignment = Alignment.Center,
             ) {
                 CircularProgressIndicator(color = BrandCyan)
+            }
+        } else if (state.errorMessage != null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(32.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        imageVector = Icons.Filled.Security,
+                        contentDescription = "Error",
+                        tint = BrandError,
+                        modifier = Modifier.size(48.dp),
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = state.errorMessage ?: "Unknown error",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = BrandOnSurfaceVariant,
+                    )
+                }
+            }
+        } else if (state.rules.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(32.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = "No apps found",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = BrandOnSurfaceVariant,
+                )
             }
         } else {
             LazyColumn(

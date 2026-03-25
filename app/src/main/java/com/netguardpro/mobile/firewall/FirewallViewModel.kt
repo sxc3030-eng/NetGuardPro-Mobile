@@ -3,6 +3,7 @@ package com.netguardpro.mobile.firewall
 import android.app.Application
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.netguardpro.mobile.NetGuardApp
@@ -20,12 +21,13 @@ data class FirewallUiState(
     val blockedTodayCount: Long = 0,
     val isLoading: Boolean = true,
     val showSystemApps: Boolean = false,
+    val errorMessage: String? = null,
 )
 
 class FirewallViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val db = NetGuardApp.instance.database
-    private val dao = db.firewallRuleDao()
+    private var db: Any? = null
+    private var dao: Any? = null
 
     private val _uiState = MutableStateFlow(FirewallUiState())
     val uiState: StateFlow<FirewallUiState> = _uiState.asStateFlow()
@@ -33,44 +35,104 @@ class FirewallViewModel(application: Application) : AndroidViewModel(application
     private var allRules: List<FirewallRule> = emptyList()
 
     init {
+        initDatabase()
         loadInstalledApps()
+    }
+
+    private fun initDatabase() {
+        try {
+            val appDb = NetGuardApp.instance.database
+            db = appDb
+            dao = appDb.firewallRuleDao()
+        } catch (e: Exception) {
+            Log.e(TAG, "Database init failed: ${e.message}", e)
+            db = null
+            dao = null
+        }
+    }
+
+    private fun getDao(): com.netguardpro.mobile.data.FirewallRuleDao? {
+        return dao as? com.netguardpro.mobile.data.FirewallRuleDao
     }
 
     private fun loadInstalledApps() {
         viewModelScope.launch(Dispatchers.IO) {
-            _uiState.update { it.copy(isLoading = true) }
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
 
-            val pm = getApplication<Application>().packageManager
-            val installedApps = pm.getInstalledApplications(PackageManager.GET_META_DATA)
+            try {
+                val pm = getApplication<Application>().packageManager
+                val installedApps = try {
+                    pm.getInstalledApplications(PackageManager.GET_META_DATA)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to get installed apps: ${e.message}", e)
+                    // Fallback: try without META_DATA flag
+                    try {
+                        pm.getInstalledApplications(0)
+                    } catch (e2: Exception) {
+                        Log.e(TAG, "Fallback also failed: ${e2.message}", e2)
+                        emptyList()
+                    }
+                }
 
-            val existingRules = dao.getAllRules().associateBy { it.packageName }
+                // Load existing rules from database (safely)
+                val existingRules: Map<String, FirewallRule> = try {
+                    getDao()?.getAllRules()?.associateBy { it.packageName } ?: emptyMap()
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to load rules from DB: ${e.message}", e)
+                    emptyMap()
+                }
 
-            val rules = installedApps
-                .filter { it.flags and ApplicationInfo.FLAG_HAS_CODE != 0 }
-                .map { appInfo ->
-                    val packageName = appInfo.packageName
-                    val appName = pm.getApplicationLabel(appInfo).toString()
-                    val isSystem = (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
+                val rules = installedApps
+                    .filter {
+                        try {
+                            it.flags and ApplicationInfo.FLAG_HAS_CODE != 0
+                        } catch (e: Exception) {
+                            false
+                        }
+                    }
+                    .mapNotNull { appInfo ->
+                        try {
+                            val packageName = appInfo.packageName
+                            val appName = try {
+                                pm.getApplicationLabel(appInfo).toString()
+                            } catch (e: Exception) {
+                                packageName
+                            }
+                            val isSystem = (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
 
-                    existingRules[packageName] ?: FirewallRule(
-                        packageName = packageName,
-                        appName = appName,
-                        allowWifi = true,
-                        allowMobile = true,
-                        isSystemApp = isSystem,
+                            existingRules[packageName] ?: FirewallRule(
+                                packageName = packageName,
+                                appName = appName,
+                                allowWifi = true,
+                                allowMobile = true,
+                                isSystemApp = isSystem,
+                            )
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Skipping app: ${e.message}")
+                            null
+                        }
+                    }
+                    .sortedWith(compareBy({ it.isSystemApp }, { it.appName.lowercase() }))
+
+                allRules = rules
+                val totalBlocked = rules.sumOf { it.blockedCount }
+
+                _uiState.update {
+                    it.copy(
+                        rules = filterRules(rules, it.searchQuery, it.showSystemApps),
+                        blockedTodayCount = totalBlocked,
+                        isLoading = false,
                     )
                 }
-                .sortedWith(compareBy({ it.isSystemApp }, { it.appName.lowercase() }))
-
-            allRules = rules
-            val totalBlocked = rules.sumOf { it.blockedCount }
-
-            _uiState.update {
-                it.copy(
-                    rules = filterRules(rules, it.searchQuery, it.showSystemApps),
-                    blockedTodayCount = totalBlocked,
-                    isLoading = false,
-                )
+            } catch (e: Exception) {
+                Log.e(TAG, "loadInstalledApps failed: ${e.message}", e)
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        errorMessage = "Failed to load apps: ${e.message}",
+                        rules = emptyList(),
+                    )
+                }
             }
         }
     }
@@ -107,17 +169,25 @@ class FirewallViewModel(application: Application) : AndroidViewModel(application
 
     private fun updateRule(packageName: String, transform: (FirewallRule) -> FirewallRule) {
         viewModelScope.launch(Dispatchers.IO) {
-            allRules = allRules.map { rule ->
-                if (rule.packageName == packageName) {
-                    val updated = transform(rule)
-                    dao.insertOrUpdate(updated)
-                    updated
-                } else {
-                    rule
+            try {
+                allRules = allRules.map { rule ->
+                    if (rule.packageName == packageName) {
+                        val updated = transform(rule)
+                        try {
+                            getDao()?.insertOrUpdate(updated)
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Failed to save rule: ${e.message}", e)
+                        }
+                        updated
+                    } else {
+                        rule
+                    }
                 }
-            }
-            _uiState.update {
-                it.copy(rules = filterRules(allRules, it.searchQuery, it.showSystemApps))
+                _uiState.update {
+                    it.copy(rules = filterRules(allRules, it.searchQuery, it.showSystemApps))
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "updateRule failed: ${e.message}", e)
             }
         }
     }
@@ -131,5 +201,9 @@ class FirewallViewModel(application: Application) : AndroidViewModel(application
             (showSystem || !rule.isSystemApp) &&
                 (query.isEmpty() || rule.appName.contains(query, ignoreCase = true) || rule.packageName.contains(query, ignoreCase = true))
         }
+    }
+
+    companion object {
+        private const val TAG = "FirewallViewModel"
     }
 }

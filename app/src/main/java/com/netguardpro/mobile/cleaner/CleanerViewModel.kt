@@ -1,6 +1,7 @@
 package com.netguardpro.mobile.cleaner
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,6 +23,7 @@ data class CleanerUiState(
     val storageInfo: StorageInfo = StorageInfo(0, 0, 0),
     val lastCleanedBytes: Long = 0,
     val cleanedCategories: Set<JunkCategory> = emptySet(),
+    val errorMessage: String? = null,
 )
 
 class CleanerViewModel(application: Application) : AndroidViewModel(application) {
@@ -37,8 +39,12 @@ class CleanerViewModel(application: Application) : AndroidViewModel(application)
 
     private fun loadStorageInfo() {
         viewModelScope.launch {
-            val info = engine.getStorageInfo()
-            _uiState.update { it.copy(storageInfo = info) }
+            try {
+                val info = engine.getStorageInfo()
+                _uiState.update { it.copy(storageInfo = info) }
+            } catch (e: Exception) {
+                Log.e(TAG, "loadStorageInfo failed: ${e.message}", e)
+            }
         }
     }
 
@@ -46,15 +52,26 @@ class CleanerViewModel(application: Application) : AndroidViewModel(application)
         if (_uiState.value.scanState == ScanState.SCANNING) return
 
         viewModelScope.launch {
-            _uiState.update { it.copy(scanState = ScanState.SCANNING, cleanedCategories = emptySet()) }
-            val result = engine.scan()
-            val storageInfo = engine.getStorageInfo()
-            _uiState.update {
-                it.copy(
-                    scanState = ScanState.COMPLETED,
-                    scanResult = result,
-                    storageInfo = storageInfo,
-                )
+            _uiState.update { it.copy(scanState = ScanState.SCANNING, cleanedCategories = emptySet(), errorMessage = null) }
+            try {
+                val result = engine.scan()
+                val storageInfo = engine.getStorageInfo()
+                _uiState.update {
+                    it.copy(
+                        scanState = ScanState.COMPLETED,
+                        scanResult = result,
+                        storageInfo = storageInfo,
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "scan failed: ${e.message}", e)
+                _uiState.update {
+                    it.copy(
+                        scanState = ScanState.COMPLETED,
+                        scanResult = ScanResult(),
+                        errorMessage = "Scan error: ${e.message}",
+                    )
+                }
             }
         }
     }
@@ -62,23 +79,28 @@ class CleanerViewModel(application: Application) : AndroidViewModel(application)
     fun cleanCategory(category: JunkCategory) {
         viewModelScope.launch {
             _uiState.update { it.copy(scanState = ScanState.CLEANING) }
-            val cleaned = engine.cleanCategory(_uiState.value.scanResult, category)
-            val storageInfo = engine.getStorageInfo()
+            try {
+                val cleaned = engine.cleanCategory(_uiState.value.scanResult, category)
+                val storageInfo = engine.getStorageInfo()
 
-            _uiState.update {
-                val newResult = when (category) {
-                    JunkCategory.CACHE -> it.scanResult.copy(cacheFiles = emptyList())
-                    JunkCategory.APKS -> it.scanResult.copy(apkFiles = emptyList())
-                    JunkCategory.LARGE_FILES -> it.scanResult.copy(largeFiles = emptyList())
-                    JunkCategory.TEMP_FILES -> it.scanResult.copy(tempFiles = emptyList())
+                _uiState.update {
+                    val newResult = when (category) {
+                        JunkCategory.CACHE -> it.scanResult.copy(cacheFiles = emptyList())
+                        JunkCategory.APKS -> it.scanResult.copy(apkFiles = emptyList())
+                        JunkCategory.LARGE_FILES -> it.scanResult.copy(largeFiles = emptyList())
+                        JunkCategory.TEMP_FILES -> it.scanResult.copy(tempFiles = emptyList())
+                    }
+                    it.copy(
+                        scanState = ScanState.COMPLETED,
+                        scanResult = newResult,
+                        storageInfo = storageInfo,
+                        lastCleanedBytes = it.lastCleanedBytes + cleaned,
+                        cleanedCategories = it.cleanedCategories + category,
+                    )
                 }
-                it.copy(
-                    scanState = ScanState.COMPLETED,
-                    scanResult = newResult,
-                    storageInfo = storageInfo,
-                    lastCleanedBytes = it.lastCleanedBytes + cleaned,
-                    cleanedCategories = it.cleanedCategories + category,
-                )
+            } catch (e: Exception) {
+                Log.e(TAG, "cleanCategory failed: ${e.message}", e)
+                _uiState.update { it.copy(scanState = ScanState.COMPLETED) }
             }
         }
     }
@@ -86,18 +108,27 @@ class CleanerViewModel(application: Application) : AndroidViewModel(application)
     fun cleanAll() {
         viewModelScope.launch {
             _uiState.update { it.copy(scanState = ScanState.CLEANING) }
-            val cleaned = engine.cleanAll(_uiState.value.scanResult)
-            val storageInfo = engine.getStorageInfo()
+            try {
+                val cleaned = engine.cleanAll(_uiState.value.scanResult)
+                val storageInfo = engine.getStorageInfo()
 
-            _uiState.update {
-                it.copy(
-                    scanState = ScanState.COMPLETED,
-                    scanResult = ScanResult(),
-                    storageInfo = storageInfo,
-                    lastCleanedBytes = it.lastCleanedBytes + cleaned,
-                    cleanedCategories = JunkCategory.entries.toSet(),
-                )
+                _uiState.update {
+                    it.copy(
+                        scanState = ScanState.COMPLETED,
+                        scanResult = ScanResult(),
+                        storageInfo = storageInfo,
+                        lastCleanedBytes = it.lastCleanedBytes + cleaned,
+                        cleanedCategories = JunkCategory.entries.toSet(),
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "cleanAll failed: ${e.message}", e)
+                _uiState.update { it.copy(scanState = ScanState.COMPLETED) }
             }
         }
+    }
+
+    companion object {
+        private const val TAG = "CleanerViewModel"
     }
 }
