@@ -4,17 +4,23 @@ import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.os.Build
+import android.util.Log
 import com.netguardpro.mobile.data.AppDatabase
 
 class NetGuardApp : Application() {
 
-    lateinit var database: AppDatabase
+    var database: AppDatabase? = null
         private set
 
     override fun onCreate() {
         super.onCreate()
         instance = this
-        database = AppDatabase.getInstance(this)
+        try {
+            database = AppDatabase.getInstance(this)
+        } catch (e: Exception) {
+            Log.e("NetGuardApp", "Database init failed: ${e.message}", e)
+            database = null
+        }
         createNotificationChannels()
     }
 

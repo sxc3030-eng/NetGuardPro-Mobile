@@ -5,7 +5,11 @@ import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.CreationExtras
 import com.netguardpro.mobile.NetGuardApp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -41,7 +45,7 @@ class FirewallViewModel(application: Application) : AndroidViewModel(application
 
     private fun initDatabase() {
         try {
-            val appDb = NetGuardApp.instance.database
+            val appDb = NetGuardApp.instance.database ?: return
             db = appDb
             dao = appDb.firewallRuleDao()
         } catch (e: Exception) {
@@ -205,5 +209,13 @@ class FirewallViewModel(application: Application) : AndroidViewModel(application
 
     companion object {
         private const val TAG = "FirewallViewModel"
+
+        val Factory: ViewModelProvider.Factory = object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
+                val application = extras[APPLICATION_KEY] as Application
+                return FirewallViewModel(application) as T
+            }
+        }
     }
 }

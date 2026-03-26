@@ -63,7 +63,7 @@ import com.netguardpro.mobile.ui.theme.BrandSurfaceVariant
 import com.netguardpro.mobile.ui.theme.BrandWarning
 
 @Composable
-fun CleanerScreen(viewModel: CleanerViewModel = viewModel()) {
+fun CleanerScreen(viewModel: CleanerViewModel = viewModel(factory = CleanerViewModel.Factory)) {
     val state by viewModel.uiState.collectAsState()
 
     Column(

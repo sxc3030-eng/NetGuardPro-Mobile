@@ -2,7 +2,11 @@ package com.netguardpro.mobile.vpn
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.CreationExtras
 import com.netguardpro.mobile.data.PreferencesManager
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -160,5 +164,15 @@ class VpnViewModel(application: Application) : AndroidViewModel(application) {
     override fun onCleared() {
         super.onCleared()
         statsJob?.cancel()
+    }
+
+    companion object {
+        val Factory: ViewModelProvider.Factory = object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
+                val application = extras[APPLICATION_KEY] as Application
+                return VpnViewModel(application) as T
+            }
+        }
     }
 }

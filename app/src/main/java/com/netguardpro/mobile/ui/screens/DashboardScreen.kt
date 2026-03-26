@@ -30,6 +30,8 @@ import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.NewReleases
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.VpnKey
 import androidx.compose.material3.Button
@@ -211,6 +213,65 @@ fun DashboardScreen() {
             onFirewallToggle = { firewallEnabled = it },
             onDnsToggle = { dnsEnabled = it },
         )
+
+        // Share & Social
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(containerColor = BrandSurface),
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    text = "Share NetGuardPro",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color.White,
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                ) {
+                    // Share button
+                    Button(
+                        onClick = {
+                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(Intent.EXTRA_SUBJECT, "NetGuardPro Mobile")
+                                putExtra(
+                                    Intent.EXTRA_TEXT,
+                                    "🛡️ NetGuardPro Mobile - Complete mobile security suite!\n\n" +
+                                        "🔒 VPN • 🛡️ Firewall • 🚫 DNS Filter • 🧹 Cleaner\n\n" +
+                                        "Download: https://github.com/sxc3030-eng/NetGuardPro-Mobile/releases"
+                                )
+                            }
+                            context.startActivity(Intent.createChooser(shareIntent, "Share via"))
+                        },
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = BrandCyan),
+                    ) {
+                        Icon(Icons.Filled.Share, contentDescription = "Share", modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Share", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                    }
+                    // GitHub button
+                    Button(
+                        onClick = {
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/sxc3030-eng/NetGuardPro-Mobile"))
+                            context.startActivity(intent)
+                        },
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = BrandPurple),
+                    ) {
+                        Icon(Icons.Filled.Star, contentDescription = "GitHub", modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("GitHub", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                    }
+                }
+            }
+        }
 
         // Version footer
         Text(

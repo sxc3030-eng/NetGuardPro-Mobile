@@ -64,7 +64,7 @@ import java.util.Date
 import java.util.Locale
 
 @Composable
-fun VpnScreen(viewModel: VpnViewModel = viewModel()) {
+fun VpnScreen(viewModel: VpnViewModel = viewModel(factory = VpnViewModel.Factory)) {
     val state by viewModel.uiState.collectAsState()
 
     LazyColumn(

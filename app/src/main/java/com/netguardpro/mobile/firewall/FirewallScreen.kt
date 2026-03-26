@@ -20,7 +20,6 @@ import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.SignalCellular4Bar
-import com.netguardpro.mobile.ui.theme.BrandError
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -56,7 +55,7 @@ import com.netguardpro.mobile.ui.theme.BrandSurface
 import com.netguardpro.mobile.ui.theme.BrandSurfaceVariant
 
 @Composable
-fun FirewallScreen(viewModel: FirewallViewModel = viewModel()) {
+fun FirewallScreen(viewModel: FirewallViewModel = viewModel(factory = FirewallViewModel.Factory)) {
     val state by viewModel.uiState.collectAsState()
 
     Column(

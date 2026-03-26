@@ -137,15 +137,33 @@ abstract class AppDatabase : RoomDatabase() {
 
         fun getInstance(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
-                val instance = Room.databaseBuilder(
-                    context.applicationContext,
-                    AppDatabase::class.java,
-                    "netguardpro.db",
-                )
-                    .fallbackToDestructiveMigration()
-                    .build()
-                INSTANCE = instance
-                instance
+                INSTANCE ?: try {
+                    val instance = Room.databaseBuilder(
+                        context.applicationContext,
+                        AppDatabase::class.java,
+                        "netguardpro.db",
+                    )
+                        .fallbackToDestructiveMigration()
+                        .build()
+                    INSTANCE = instance
+                    instance
+                } catch (e: Exception) {
+                    // If first attempt fails, try deleting and recreating
+                    try {
+                        context.applicationContext.deleteDatabase("netguardpro.db")
+                        val instance = Room.databaseBuilder(
+                            context.applicationContext,
+                            AppDatabase::class.java,
+                            "netguardpro.db",
+                        )
+                            .fallbackToDestructiveMigration()
+                            .build()
+                        INSTANCE = instance
+                        instance
+                    } catch (e2: Exception) {
+                        throw e2
+                    }
+                }
             }
         }
     }
