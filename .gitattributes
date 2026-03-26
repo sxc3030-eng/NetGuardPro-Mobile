@@ -1,0 +1,6 @@
+# Ensure gradlew keeps Unix line endings on all platforms
+gradlew text eol=lf
+*.sh text eol=lf
+gradlew.bat text eol=crlf
+*.bat text eol=crlf
+*.jar binary
