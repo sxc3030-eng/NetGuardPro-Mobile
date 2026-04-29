@@ -30,3 +30,11 @@ Requires Android SDK with compileSdk 34 and minSdk 26.
 ## Package
 
 `com.netguardpro.mobile`
+
+---
+
+### Method
+
+Android port of the NetGuardPro suite. Built over **3 days in late March 2026** with **Claude (Opus 4.6)** as paired implementation and audit partner. Each commit cross-audited: code review, dependency check, security pass on the WireGuard tunnel and per-app firewall layer.
+
+---
